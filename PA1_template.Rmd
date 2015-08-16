@@ -105,6 +105,63 @@ As shown in the previous plot, the subject walks more between 8:00am and 10:00am
 
 ## Imputing missing values
 
+The number of rows with missing values can be extracted with the following snippet:
+
+```{r}
+sum(is.na(activity.raw[1]))
+```
+
+In order to fill the missing values, we will assign the average value for the specific interval, previously extracted and stored in the `grpByInterval` variable. We can use a helper function to extract this value:
+
+```{r}
+GetStepsForInterval <- function(intervalValue){
+    unlist(grpByInterval %>% filter(interval == intervalValue) %>% select(Mean))[[1]]
+}
+```
+
+We can now create a new, clean, dataset, with the missing values replaced:
+
+```{r}
+#copy original raw with missing values
+activity.tidy <- activity.raw
+#clear missing cells
+for(i in 1:nrow(activity.tidy)){
+    isNa <- is.na(activity.tidy[i, 1])
+    if(isNa){
+        avgValue <- GetStepsForInterval(activity.tidy[i, 3])
+        activity.tidy[i, 1] <- avgValue
+    }
+}
+#make sure there are no more NA values in tidy dataset
+sum(is.na(activity.tidy[1]))
+```
+
+After filling up the gaps, we can update our previous histogram to show the shape of our new, cleaned, dataset:
+
+```{r}
+    grpByDay.tidy <- activity.tidy %>% 
+                na.omit() %>% 
+                group_by(date) %>% 
+                summarise(Count = n(), Sum = sum(steps), Mean = mean(steps), Median = median(steps))
+    
+    grpByDay.tidy
+
+    try(library(ggplot2), silent = TRUE)
+    
+    ggplot(data = grpByDay.tidy, aes(grpByDay.tidy$Sum)) + 
+    geom_histogram(aes(y = ..density..), breaks = seq(0, 25000, by = 2000), alpha = 0.5) + 
+    geom_density(linetype = "dotted", size = 0.75, colour = "magenta3", alpha = .2, fill = "#FF6666") + 
+    labs(title = "Steps taken by day without missing values - Histogram") +
+    labs(x = "Steps", y = "Frequency")
+```
+
+As we can see, the distribution and frequency remains the same, although the data seems to be more complete.
+
+
+
+
+
+
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
