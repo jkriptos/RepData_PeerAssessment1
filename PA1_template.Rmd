@@ -157,11 +157,98 @@ After filling up the gaps, we can update our previous histogram to show the shap
 
 As we can see, the distribution and frequency remains the same, although the data seems to be more complete.
 
-
-
-
-
-
-
-
 ## Are there differences in activity patterns between weekdays and weekends?
+
+To compare the steps frequency between weekdays and weekends we will first mutate our tidy set to include another variable, named `isWeekend`, that will tell us if the specific observation date corresponds to a weekend day or not. This is accomplished with the following script:
+
+```{r}
+activity.tidy <- activity.tidy  %>%
+    mutate(obsDate = as.Date(as.character(date), "%Y-%m-%d"),
+           isWeekend = grepl('^S', weekdays(obsDate)))
+
+head(activity.tidy, 10)
+```
+
+From here, we can plot two panels and compare the difference on those dates by intervals. First, we will extract the interval averages for the week days, and then, the interval averages for the weekends:
+
+```{r}
+#first, we get weekday averages
+weekdays.averages <- activity.tidy %>% 
+    filter(isWeekend == FALSE) %>%
+    group_by(interval) %>% 
+    summarise(Mean = mean(steps))
+
+#then, we get weekend averages
+weekend.averages <- activity.tidy %>% 
+    filter(isWeekend == TRUE) %>%
+    group_by(interval) %>% 
+    summarise(Mean = mean(steps))
+```
+
+Once the averages are calculated, we can plot the different patterns for weekdays vs weekends, by intervals, in a single panel:
+
+```{r}
+#first we create a multiplot function:
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+weekdayPlot <- ggplot(weekdays.averages, aes(interval, Mean)) + 
+               geom_line() + 
+               labs(title = "Weekday averages") +
+               scale_x_continuous(breaks = seq(0, 2355, by = 100))
+
+weekendPlot <- ggplot(weekend.averages, aes(interval, Mean)) + 
+               geom_line() + 
+               labs(title = "Weekend averages") +
+               scale_x_continuous(breaks = seq(0, 2355, by = 100))
+
+multiplot(weekendPlot, weekdayPlot, cols = 1)
+
+```
+
+
+
+
