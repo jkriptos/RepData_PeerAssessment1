@@ -1,22 +1,107 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+<!-- 
+----
+title: "Quantified Self Analysis"
+author: "JasonG"
+date: "Sunday, August 16, 2015"
+output: html_document
+----
+--> 
 
+
+# Quantified Self Analysis
+
+
+#### Anonymous Subject, collected between the months of October and November, 2012
+
+## Intro
+
+This documents makes use of data from a personal activity monitoring device. The data used in this analysis corresponds to the number of steps taken by an anonymous individual at 5 minute intervals through out the day during the months of October and November of 2012.
+
+The dataset that contains the data collected is composed by the following variables:
+
+- **steps**: Number of steps taking in a 5-minute interval (missing values are coded as `NA`).
+- **date**: The date on which the measurement was taken in *YYYY-MM-DD* format.
+- **interval**: Identifier for the 5-minute interval in which measurement was taken.
+
+The dataset is stored in a comma-separated-value (CSV) file, zipped in this repository under the name «*activity.zip*».
 
 ## Loading and preprocessing the data
 
+The data stored in the source file is loaded by first extracting the zipped CSV file with the original dataset and then loading that dataset into a variable named `activity.raw`. From now on, the variable `activity.raw` represents a dataset with the data in its most primitive state, that is, without any transformation of filter. The following snippet shows the process used to load the data:
 
+```{r}
+    unzip("activity.zip")
+    activity.raw <- read.csv("activity.csv")
+    summary(activity.raw)
+```
 
 ## What is mean total number of steps taken per day?
 
+In order to calculate the number of steps taken by day we will make use of the dplyr package. After loading the library, we will filter the `NA` rows, group it by date and then apply the count, sum, mean, and median calculations over the resulting set. The result of these calculations is stored in a variable named `grpByDay`, which represents the summary by date. The following code shows the process previously described:
 
+```{r, message=F, warning=F}
+    library(dplyr)
+    
+    grpByDay <- activity.raw %>% 
+                na.omit() %>% 
+                group_by(date) %>% 
+                summarise(Count = n(), Sum = sum(steps), Mean = mean(steps), Median = median(steps))
+    
+    grpByDay
+```
+
+With the data summarized we can now plot a histogram that shows us the frequency of the steps, by day.
+
+```{r, message=F, warning=F}
+    try(library(ggplot2), silent = TRUE)
+    
+    ggplot(data = grpByDay, aes(grpByDay$Sum)) + 
+    geom_histogram(aes(y = ..density..), breaks = seq(0, 25000, by = 2000), alpha = 0.5) + 
+    geom_density(linetype = "dotted", size = 0.75, colour = "magenta3", alpha = .2, fill = "#FF6666") + 
+    labs(title = "Steps taken by day - Histogram") +
+    labs(x = "Steps", y = "Frequency")
+```
+
+The list mean an median of steps taken per day, for all days, is shown in the next table:
+
+```{r}
+    knitr::kable(grpByDay %>% select(date, Mean, Median))
+```
+
+The mean of all days is extracted as follows:
+
+```{r}
+    mean(activity.raw[complete.cases(activity.raw), c(1)])
+```
+
+
+And the median of all days, without the missing values, can is extracted as follows:
+```{r}
+    median(activity.raw[complete.cases(activity.raw), c(1)])
+```
 
 ## What is the average daily activity pattern?
 
+In order to extract the daily activity pattern, we must first group the data by intervals and extract the average number of steps for each interval. The following snippet shows us how to extract such average:
 
+```{r}
+    grpByInterval <- activity.raw %>% 
+        na.omit() %>% 
+        group_by(interval) %>% 
+        summarise(Count = n(), Sum = sum(steps), Mean = mean(steps))
+    
+    grpByInterval
+```
+
+Once the daily interval is calculated, we can plot it with a time series plot, having the intervals of 5 minutes in the X-axis, and the average number of steps in the Y-axis. Notice that in order to improve readability, the tics on the X-axis have been marked each hour.
+
+```{r}
+    ggplot(grpByInterval, aes(interval, Mean)) + 
+    geom_line() + 
+    scale_x_continuous(breaks = seq(0, 2355, by = 100))
+```
+
+As shown in the previous plot, the subject walks more between 8:00am and 10:00am.
 
 ## Imputing missing values
 
